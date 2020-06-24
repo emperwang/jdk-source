@@ -84,6 +84,8 @@ public abstract class AtomicIntegerFieldUpdater<T> {
     @CallerSensitive
     public static <U> AtomicIntegerFieldUpdater<U> newUpdater(Class<U> tclass,
                                                               String fieldName) {
+        // 创建实例的静态工厂方法
+        // 此处是创建一个 AtomicIntegerFieldUpdaterImpl
         return new AtomicIntegerFieldUpdaterImpl<U>
             (tclass, fieldName, Reflection.getCallerClass());
     }
@@ -368,7 +370,9 @@ public abstract class AtomicIntegerFieldUpdater<T> {
      */
     private static final class AtomicIntegerFieldUpdaterImpl<T>
         extends AtomicIntegerFieldUpdater<T> {
+        // 操作的方法类
         private static final sun.misc.Unsafe U = sun.misc.Unsafe.getUnsafe();
+        // field的偏移地址
         private final long offset;
         /**
          * if field is protected, the subclass constructing updater, else
@@ -376,6 +380,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
          */
         private final Class<?> cclass;
         /** class holding the field */
+        // target class
         private final Class<T> tclass;
 
         AtomicIntegerFieldUpdaterImpl(final Class<T> tclass,
@@ -384,15 +389,18 @@ public abstract class AtomicIntegerFieldUpdater<T> {
             final Field field;
             final int modifiers;
             try {
+                // 获取field对象
                 field = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Field>() {
                         public Field run() throws NoSuchFieldException {
                             return tclass.getDeclaredField(fieldName);
                         }
                     });
+                // field的修饰符
                 modifiers = field.getModifiers();
                 sun.reflect.misc.ReflectUtil.ensureMemberAccess(
                     caller, tclass, null, modifiers);
+                // 类加载器
                 ClassLoader cl = tclass.getClassLoader();
                 ClassLoader ccl = caller.getClassLoader();
                 if ((ccl != null) && (ccl != cl) &&
@@ -431,6 +439,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
          * classloader's delegation chain.
          * Equivalent to the inaccessible: first.isAncestor(second).
          */
+        // 判断两个列加载器是否有  父子关系
         private static boolean isAncestor(ClassLoader first, ClassLoader second) {
             ClassLoader acl = first;
             do {
@@ -446,6 +455,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
          * Returns true if the two classes have the same class loader and
          * package qualifier
          */
+        // 类加载器相同  且  package名字相同,则为同一个package
         private static boolean isSamePackage(Class<?> class1, Class<?> class2) {
             return class1.getClassLoader() == class2.getClassLoader()
                    && Objects.equals(getPackageName(class1), getPackageName(class2));
@@ -483,7 +493,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
                         " using an instance of " +
                         obj.getClass().getName()));
         }
-
+        // 具体设置的方法实现
         public final boolean compareAndSet(T obj, int expect, int update) {
             accessCheck(obj);
             return U.compareAndSwapInt(obj, offset, expect, update);

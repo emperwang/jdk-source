@@ -85,9 +85,11 @@ public abstract class AtomicLongFieldUpdater<T> {
     public static <U> AtomicLongFieldUpdater<U> newUpdater(Class<U> tclass,
                                                            String fieldName) {
         Class<?> caller = Reflection.getCallerClass();
+        // 支持long的cas更新,则使用cas方式
         if (AtomicLong.VM_SUPPORTS_LONG_CAS)
             return new CASUpdater<U>(tclass, fieldName, caller);
         else
+            // 不支持则 使用 加锁方式
             return new LockedUpdater<U>(tclass, fieldName, caller);
     }
 

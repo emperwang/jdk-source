@@ -48,10 +48,12 @@ import sun.misc.Unsafe;
  */
 public class AtomicIntegerArray implements java.io.Serializable {
     private static final long serialVersionUID = 2862133569453604235L;
-
+    // 获取操作函数
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // 偏移的基址
     private static final int base = unsafe.arrayBaseOffset(int[].class);
     private static final int shift;
+    // 数据存储
     private final int[] array;
 
     static {
@@ -67,7 +69,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
 
         return byteOffset(i);
     }
-
+    // 地址转换
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }
@@ -110,9 +112,10 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @return the current value
      */
     public final int get(int i) {
+        // 先进行地址转换,再获取值
         return getRaw(checkedByteOffset(i));
     }
-
+    // 获取值
     private int getRaw(long offset) {
         return unsafe.getIntVolatile(array, offset);
     }
@@ -124,6 +127,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param newValue the new value
      */
     public final void set(int i, int newValue) {
+        // 设置值
         unsafe.putIntVolatile(array, checkedByteOffset(i), newValue);
     }
 

@@ -195,6 +195,7 @@ public class AtomicMarkableReference<V> {
         objectFieldOffset(UNSAFE, "pair", AtomicMarkableReference.class);
 
     private boolean casPair(Pair<V> cmp, Pair<V> val) {
+        // 此处交换时,交换 pair对象
         return UNSAFE.compareAndSwapObject(this, pairOffset, cmp, val);
     }
 
