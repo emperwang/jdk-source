@@ -165,7 +165,7 @@ public class Semaphore implements java.io.Serializable {
      */
     abstract static class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = 1192457210091910933L;
-
+        // 构造器; 可见参数指定了 可用令牌数
         Sync(int permits) {
             setState(permits);
         }
@@ -176,20 +176,26 @@ public class Semaphore implements java.io.Serializable {
 
         final int nonfairTryAcquireShared(int acquires) {
             for (;;) {
+                // 获取总的 令牌数
                 int available = getState();
                 int remaining = available - acquires;
+                // 更新令牌数
                 if (remaining < 0 ||
                     compareAndSetState(available, remaining))
                     return remaining;
             }
         }
-
+        // 释放 令牌
         protected final boolean tryReleaseShared(int releases) {
             for (;;) {
+                // 获取当前的令牌
                 int current = getState();
+                // 最终要更新的令牌数
                 int next = current + releases;
+                // 有效性检测
                 if (next < current) // overflow
                     throw new Error("Maximum permit count exceeded");
+                // 更新
                 if (compareAndSetState(current, next))
                     return true;
             }
@@ -205,7 +211,7 @@ public class Semaphore implements java.io.Serializable {
                     return;
             }
         }
-
+        // 清空 令牌数
         final int drainPermits() {
             for (;;) {
                 int current = getState();
@@ -216,7 +222,7 @@ public class Semaphore implements java.io.Serializable {
     }
 
     /**
-     * NonFair version
+     * NonFair version 非公平锁
      */
     static final class NonfairSync extends Sync {
         private static final long serialVersionUID = -2694183684443567898L;
@@ -231,7 +237,7 @@ public class Semaphore implements java.io.Serializable {
     }
 
     /**
-     * Fair version
+     * Fair version  公平锁
      */
     static final class FairSync extends Sync {
         private static final long serialVersionUID = 2014338818796000944L;
@@ -239,13 +245,18 @@ public class Semaphore implements java.io.Serializable {
         FairSync(int permits) {
             super(permits);
         }
-
+        // 公平锁 获取
         protected int tryAcquireShared(int acquires) {
             for (;;) {
+                // 如果 在sync queue中自己的前面有等待的thread
+                // 则直接获取失败
                 if (hasQueuedPredecessors())
                     return -1;
+                // 否则直接获取 令牌
                 int available = getState();
+                // 剩余 令牌数
                 int remaining = available - acquires;
+                // 更新令牌数
                 if (remaining < 0 ||
                     compareAndSetState(available, remaining))
                     return remaining;
@@ -261,6 +272,7 @@ public class Semaphore implements java.io.Serializable {
      *        This value may be negative, in which case releases
      *        must occur before any acquires will be granted.
      */
+    // 构造器, 默认是非公平锁
     public Semaphore(int permits) {
         sync = new NonfairSync(permits);
     }
@@ -276,6 +288,7 @@ public class Semaphore implements java.io.Serializable {
      *        first-in first-out granting of permits under contention,
      *        else {@code false}
      */
+    // 可以根据参数来 使用特定类型的锁
     public Semaphore(int permits, boolean fair) {
         sync = fair ? new FairSync(permits) : new NonfairSync(permits);
     }
@@ -359,6 +372,7 @@ public class Semaphore implements java.io.Serializable {
      * @return {@code true} if a permit was acquired and {@code false}
      *         otherwise
      */
+    // 注意哦,此函数是使用 CAS 持续进行获取,没有休眠
     public boolean tryAcquire() {
         return sync.nonfairTryAcquireShared(1) >= 0;
     }
