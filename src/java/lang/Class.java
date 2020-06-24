@@ -2064,7 +2064,9 @@ public final class Class<T> implements java.io.Serializable,
     @CallerSensitive
     public Field getDeclaredField(String name)
         throws NoSuchFieldException, SecurityException {
+        // access 权限检查  todo 没有看明白
         checkMemberAccess(Member.DECLARED, Reflection.getCallerClass(), true);
+        // 从field中查找要用的field
         Field field = searchFields(privateGetDeclaredFields(false), name);
         if (field == null) {
             throw new NoSuchFieldException(name);
@@ -2461,21 +2463,29 @@ public final class Class<T> implements java.io.Serializable,
     private static boolean useCaches = true;
 
     // reflection data that might get invalidated when JVM TI RedefineClasses() is called
+    // 存储反射数据的类
     private static class ReflectionData<T> {
+        // 声明的 field
         volatile Field[] declaredFields;
+        // public field
         volatile Field[] publicFields;
+        // 声明的 method
         volatile Method[] declaredMethods;
+        // public  method
         volatile Method[] publicMethods;
+        // 声明的 constructors
         volatile Constructor<T>[] declaredConstructors;
+        // public constructor
         volatile Constructor<T>[] publicConstructors;
         // Intermediate results for getFields and getMethods
         volatile Field[] declaredPublicFields;
         volatile Method[] declaredPublicMethods;
+        // 接口
         volatile Class<?>[] interfaces;
 
         // Value of classRedefinedCount when we created this ReflectionData instance
         final int redefinedCount;
-
+        // 构造器
         ReflectionData(int redefinedCount) {
             this.redefinedCount = redefinedCount;
         }
@@ -2508,8 +2518,10 @@ public final class Class<T> implements java.io.Serializable,
         if (!useCaches) return null;
 
         while (true) {
+            // 创建 ReflectionData
             ReflectionData<T> rd = new ReflectionData<>(classRedefinedCount);
             // try to CAS it...
+            // CAS  替换
             if (Atomic.casReflectionData(this, oldReflectionData, new SoftReference<>(rd))) {
                 return rd;
             }
@@ -2580,6 +2592,7 @@ public final class Class<T> implements java.io.Serializable,
             if (res != null) return res;
         }
         // No cached value available; request value from VM
+        // getDeclaredFields0 native 方法获取 field
         res = Reflection.filterFields(this, getDeclaredFields0(publicOnly));
         if (rd != null) {
             if (publicOnly) {

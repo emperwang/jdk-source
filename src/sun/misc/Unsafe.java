@@ -50,7 +50,7 @@ public final class Unsafe {
     }
 
     private Unsafe() {}
-
+    // 创建实例, 使用时,直接返回此实例
     private static final Unsafe theUnsafe = new Unsafe();
 
     /**
@@ -88,6 +88,7 @@ public final class Unsafe {
         Class<?> caller = Reflection.getCallerClass();
         if (!VM.isSystemDomainLoader(caller.getClassLoader()))
             throw new SecurityException("Unsafe");
+        // 返回实例
         return theUnsafe;
     }
 
@@ -882,6 +883,7 @@ public final class Unsafe {
      * holding <tt>expected</tt>.
      * @return <tt>true</tt> if successful
      */
+    // 原子的更新一个对象 offset偏移地址的值
     public final native boolean compareAndSwapInt(Object o, long offset,
                                                   int expected,
                                                   int x);
@@ -1032,6 +1034,7 @@ public final class Unsafe {
         int v;
         do {
             v = getIntVolatile(o, offset);
+            // 可以看到这里的设置很巧妙了, x为x+delta
         } while (!compareAndSwapInt(o, offset, v, v + delta));
         return v;
     }
@@ -1068,7 +1071,9 @@ public final class Unsafe {
      */
     public final int getAndSetInt(Object o, long offset, int newValue) {
         int v;
+        // 循环,直到成功
         do {
+            // 获取对象偏移地址为 offset的值
             v = getIntVolatile(o, offset);
         } while (!compareAndSwapInt(o, offset, v, newValue));
         return v;

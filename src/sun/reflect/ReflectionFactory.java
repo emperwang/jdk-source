@@ -64,6 +64,7 @@ public class ReflectionFactory {
     private static boolean initted = false;
     private static final Permission reflectionFactoryAccessPerm
         = new RuntimePermission("reflectionFactoryAccess");
+    // 饿汉式  创建实例
     private static final ReflectionFactory soleInstance = new ReflectionFactory();
     // Provides access to package-private mechanisms in java.lang.reflect
     private static volatile LangReflectAccess langReflectAccess;
