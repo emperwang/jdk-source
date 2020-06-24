@@ -168,20 +168,26 @@ public class CountDownLatch {
         int getCount() {
             return getState();
         }
-
+        // 可以看到这里特殊处
+        // 这里获取 令牌, 简单说就是 判断令牌数是否为0, 为0则返回获取到了; 否则是没有获取到
+        // 当state为0时,因为这里一直返回为1, 那么就会持续的唤醒下一个node
         protected int tryAcquireShared(int acquires) {
             return (getState() == 0) ? 1 : -1;
         }
-
+        // 这里释放令牌的操作
+        // 其实就是把 令牌数 减1并更新; 最终返回 结果是: 剩余令牌数 是否为0
+        // 不为0, 则表示没有
         protected boolean tryReleaseShared(int releases) {
             // Decrement count; signal when transition to zero
             for (;;) {
+                // 获取当前state
                 int c = getState();
                 if (c == 0)
                     return false;
+                // 数量减1  并更新
                 int nextc = c-1;
                 if (compareAndSetState(c, nextc))
-                    return nextc == 0;
+                    return nextc == 0;  // 返回结果是: 剩余的令牌是否为0
             }
         }
     }
