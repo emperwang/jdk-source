@@ -547,6 +547,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     /**
      * The default rejected execution handler
      */
+    // 默认的策略是 拒绝策略
     private static final RejectedExecutionHandler defaultHandler =
         new AbortPolicy();
 

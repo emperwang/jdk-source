@@ -83,6 +83,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
      * the underlying task
      * @since 1.6
      */
+    // 把一个 runnable任务,包装为 FutureTask
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return new FutureTask<T>(runnable, value);
     }
@@ -108,7 +109,9 @@ public abstract class AbstractExecutorService implements ExecutorService {
      */
     public Future<?> submit(Runnable task) {
         if (task == null) throw new NullPointerException();
+        // 包装任务
         RunnableFuture<Void> ftask = newTaskFor(task, null);
+        // 提交任务执行
         execute(ftask);
         return ftask;
     }
@@ -164,33 +167,37 @@ public abstract class AbstractExecutorService implements ExecutorService {
             Iterator<? extends Callable<T>> it = tasks.iterator();
 
             // Start one task for sure; the rest incrementally
+            // 添加任务
             futures.add(ecs.submit(it.next()));
             --ntasks;
             int active = 1;
 
             for (;;) {
+                // 是否是否有任务
                 Future<T> f = ecs.poll();
-                if (f == null) {
-                    if (ntasks > 0) {
+                if (f == null) {    // f==null,表示没有任务
+                    if (ntasks > 0) {// 如果任务数大于0,
                         --ntasks;
+                        // 继续提交任务
                         futures.add(ecs.submit(it.next()));
                         ++active;
                     }
-                    else if (active == 0)
+                    else if (active == 0)   // 如果没有活动的任务,则退出
                         break;
                     else if (timed) {
+                        // 如果使用了超时,则检测是否超时
                         f = ecs.poll(nanos, TimeUnit.NANOSECONDS);
                         if (f == null)
                             throw new TimeoutException();
                         nanos = deadline - System.nanoTime();
                     }
-                    else
+                    else    // 否则继续获取已提交的任务
                         f = ecs.take();
                 }
-                if (f != null) {
-                    --active;
+                if (f != null) {    // 如果有已提交的任务
+                    --active;   // 减少活动数
                     try {
-                        return f.get();
+                        return f.get();  // 等待,获取结果值
                     } catch (ExecutionException eex) {
                         ee = eex;
                     } catch (RuntimeException rex) {
@@ -232,11 +239,13 @@ public abstract class AbstractExecutorService implements ExecutorService {
         ArrayList<Future<T>> futures = new ArrayList<Future<T>>(tasks.size());
         boolean done = false;
         try {
+            // 提交所有任务
             for (Callable<T> t : tasks) {
                 RunnableFuture<T> f = newTaskFor(t);
                 futures.add(f);
                 execute(f);
             }
+            // 等待所有任务返回
             for (int i = 0, size = futures.size(); i < size; i++) {
                 Future<T> f = futures.get(i);
                 if (!f.isDone()) {
