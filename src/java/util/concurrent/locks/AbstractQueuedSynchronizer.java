@@ -1519,6 +1519,7 @@ public abstract class AbstractQueuedSynchronizer
      */
     final boolean apparentlyFirstQueuedIsExclusive() {
         Node h, s;
+        // 如果第一个排队的线程是 非shared的,则返回true
         return (h = head) != null &&
             (s = h.next)  != null &&
             !s.isShared()         &&
