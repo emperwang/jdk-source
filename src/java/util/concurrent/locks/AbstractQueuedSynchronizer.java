@@ -668,7 +668,7 @@ public abstract class AbstractQueuedSynchronizer
             s = null;
             // 从tail开始往前找,找一个可用的node
             for (Node t = tail; t != null && t != node; t = t.prev)
-                if (t.waitStatus <= 0)
+                if (t.waitStatus <= 0)  // 可以看到 waitStatus为0 也会被处理
                     s = t;
         }
         // 找到了,则唤醒此node对应的thread
@@ -1959,7 +1959,7 @@ public abstract class AbstractQueuedSynchronizer
                 Node next = first.nextWaiter;
                 // 删除
                 first.nextWaiter = null;
-                // 转换
+                // 转换队列; 也就是把 condition上的节点  转换到  sync queue上节点
                 transferForSignal(first);
                 first = next;
             } while (first != null);
@@ -2031,7 +2031,7 @@ public abstract class AbstractQueuedSynchronizer
                 throw new IllegalMonitorStateException();
             Node first = firstWaiter;
             if (first != null)
-                doSignalAll(first);
+                doSignalAll(first); // 唤醒在此condition上等待的线程
         }
 
         /**
@@ -2142,8 +2142,10 @@ public abstract class AbstractQueuedSynchronizer
          */
         public final long awaitNanos(long nanosTimeout)
                 throws InterruptedException {
+            // 发生中断 就抛出中断异常
             if (Thread.interrupted())
                 throw new InterruptedException();
+            // 添加  conditoinWaiter
             Node node = addConditionWaiter();
             int savedState = fullyRelease(node);
             final long deadline = System.nanoTime() + nanosTimeout;
@@ -2153,8 +2155,10 @@ public abstract class AbstractQueuedSynchronizer
                     transferAfterCancelledWait(node);
                     break;
                 }
+                // 阻塞当前线程
                 if (nanosTimeout >= spinForTimeoutThreshold)
                     LockSupport.parkNanos(this, nanosTimeout);
+                // 中断模式确定
                 if ((interruptMode = checkInterruptWhileWaiting(node)) != 0)
                     break;
                 nanosTimeout = deadline - System.nanoTime();
@@ -2162,7 +2166,7 @@ public abstract class AbstractQueuedSynchronizer
             if (acquireQueued(node, savedState) && interruptMode != THROW_IE)
                 interruptMode = REINTERRUPT;
             if (node.nextWaiter != null)
-                unlinkCancelledWaiters();
+                unlinkCancelledWaiters();   // 移除取消的节点
             if (interruptMode != 0)
                 reportInterruptAfterWait(interruptMode);
             return deadline - System.nanoTime();
