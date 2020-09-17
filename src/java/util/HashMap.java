@@ -630,13 +630,16 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
         else {
+            // 链表中有数据,且有 hash key和要插入的数据一致,则覆盖旧数据
             Node<K,V> e; K k;
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
-            else if (p instanceof TreeNode)
+            else if (p instanceof TreeNode) // 红黑树的插入
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {
+                // 在链表的最后开始插入数据
+                // 如果链表的长度大于8,则转换为红黑树
                 for (int binCount = 0; ; ++binCount) {
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);

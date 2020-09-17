@@ -214,11 +214,15 @@ public class LinkedHashMap<K,V>
      *
      * @serial
      */
+    // 此控制了访问顺序
+    // 把每次访问的数据 放入到tail中, 用于lru的实现
     final boolean accessOrder;
 
     // internal utilities
 
     // link at the end of list
+    // 把节点连接到 链表中
+    // 可以看到每次都是把数据放到链表的最后
     private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
         LinkedHashMap.Entry<K,V> last = tail;
         tail = p;
@@ -253,8 +257,10 @@ public class LinkedHashMap<K,V>
     }
 
     Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
+        // 复写了 hashMap中的 创建方法
         LinkedHashMap.Entry<K,V> p =
             new LinkedHashMap.Entry<K,V>(hash, key, value, e);
+        // 把创建的 entry连接到 链表中
         linkNodeLast(p);
         return p;
     }
@@ -293,7 +299,8 @@ public class LinkedHashMap<K,V>
         else
             a.before = b;
     }
-
+    // 插入数据完成后, 可以进行一个 evict, lru的实现
+    // 可以看到lru的一个实现, 每次都是从 first开始删除
     void afterNodeInsertion(boolean evict) { // possibly remove eldest
         LinkedHashMap.Entry<K,V> first;
         if (evict && (first = head) != null && removeEldestEntry(first)) {
@@ -308,20 +315,23 @@ public class LinkedHashMap<K,V>
             LinkedHashMap.Entry<K,V> p =
                 (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
             p.after = null;
+            // e.before 为null, 新创建的 node
             if (b == null)
-                head = a;
+                head = a;       // e为新创建的值,则把 e.after放到head, 则此时head应该也为null
+            else        // 非新创建的,如:在添加时 hash冲突, 覆盖值的一个 entry
+                b.after = a;   // b.after=a, 相当于删除了 e
+            if (a != null)      // a不为null,说明不是新创建的 节点
+                a.before = b;       // a.before设置为b, 相当于就是 删除了节点 e
             else
-                b.after = a;
-            if (a != null)
-                a.before = b;
-            else
-                last = b;
-            if (last == null)
+                last = b;           // a为null, 新创建的节点, 把 b 设置到last,即tail中, 此时last为null
+            // last 为null, 即刚开始插入,或者clear操作后
+            if (last == null)   // last为null, 则把p设置到 head中
                 head = p;
-            else {
+            else {              // 把 p放入到 最后
                 p.before = last;
                 last.after = p;
             }
+            // 更新tail的值
             tail = p;
             ++modCount;
         }
