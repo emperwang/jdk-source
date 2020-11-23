@@ -48,12 +48,14 @@ import sun.misc.Unsafe;
  */
 public class AtomicReference<V> implements java.io.Serializable {
     private static final long serialVersionUID = -1848883965231344442L;
-
+    // cas 操作类
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // 对象 即  reference的偏移地址
     private static final long valueOffset;
 
     static {
         try {
+            // 获取偏移地址
             valueOffset = unsafe.objectFieldOffset
                 (AtomicReference.class.getDeclaredField("value"));
         } catch (Exception ex) { throw new Error(ex); }
@@ -112,6 +114,7 @@ public class AtomicReference<V> implements java.io.Serializable {
      * @return {@code true} if successful. False return indicates that
      * the actual value was not equal to the expected value.
      */
+    // 直接cas设置对象
     public final boolean compareAndSet(V expect, V update) {
         return unsafe.compareAndSwapObject(this, valueOffset, expect, update);
     }
@@ -140,6 +143,7 @@ public class AtomicReference<V> implements java.io.Serializable {
      */
     @SuppressWarnings("unchecked")
     public final V getAndSet(V newValue) {
+        // 先获取原始值, 然后使用newValue cas设置
         return (V)unsafe.getAndSetObject(this, valueOffset, newValue);
     }
 
@@ -156,8 +160,11 @@ public class AtomicReference<V> implements java.io.Serializable {
     public final V getAndUpdate(UnaryOperator<V> updateFunction) {
         V prev, next;
         do {
+            // 获取原始值
             prev = get();
+            // 使用参数function操作一下,得到要设置的值
             next = updateFunction.apply(prev);
+            // cas 设置
         } while (!compareAndSet(prev, next));
         return prev;
     }

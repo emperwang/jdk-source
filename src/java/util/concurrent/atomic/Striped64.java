@@ -120,6 +120,7 @@ abstract class Striped64 extends Number {
     @sun.misc.Contended static final class Cell {
         volatile long value;
         Cell(long x) { value = x; }
+        // 设置cell中存储的值
         final boolean cas(long cmp, long val) {
             return UNSAFE.compareAndSwapLong(this, valueOffset, cmp, val);
         }
@@ -167,6 +168,7 @@ abstract class Striped64 extends Number {
     /**
      * CASes the base field.
      */
+    // cas 操作base字段的为其设置新的值
     final boolean casBase(long cmp, long val) {
         return UNSAFE.compareAndSwapLong(this, BASE, cmp, val);
     }
@@ -174,6 +176,7 @@ abstract class Striped64 extends Number {
     /**
      * CASes the cellsBusy field from 0 to 1 to acquire lock.
      */
+    // 设置 cellBusy字段的值为1
     final boolean casCellsBusy() {
         return UNSAFE.compareAndSwapInt(this, CELLSBUSY, 0, 1);
     }
@@ -182,6 +185,8 @@ abstract class Striped64 extends Number {
      * Returns the probe value for the current thread.
      * Duplicated from ThreadLocalRandom because of packaging restrictions.
      */
+    // 获取一个随机数
+    // threadLocalRandomProbe
     static final int getProbe() {
         return UNSAFE.getInt(Thread.currentThread(), PROBE);
     }
@@ -191,6 +196,7 @@ abstract class Striped64 extends Number {
      * given thread.
      * Duplicated from ThreadLocalRandom because of packaging restrictions.
      */
+    // 设置随机种子
     static final int advanceProbe(int probe) {
         probe ^= probe << 13;   // xorshift
         probe ^= probe >>> 17;
@@ -298,6 +304,9 @@ abstract class Striped64 extends Number {
      * the low-overhead requirements of this class. So must instead be
      * maintained by copy/paste/adapt.
      */
+    // x 要累加的值
+    // fn 操作函数
+    // 是否有值
     final void doubleAccumulate(double x, DoubleBinaryOperator fn,
                                 boolean wasUncontended) {
         int h;
@@ -309,10 +318,15 @@ abstract class Striped64 extends Number {
         boolean collide = false;                // True if last slot nonempty
         for (;;) {
             Cell[] as; Cell a; int n; long v;
+            // cell数组进行了初始化
             if ((as = cells) != null && (n = as.length) > 0) {
+                // (n-1)&h位置上没有值
                 if ((a = as[(n - 1) & h]) == null) {
+                    // 且cell 不繁忙
                     if (cellsBusy == 0) {       // Try to attach new Cell
+                        // 创建一个新的cell
                         Cell r = new Cell(Double.doubleToRawLongBits(x));
+                        // cas设置 cellBusy 为1
                         if (cellsBusy == 0 && casCellsBusy()) {
                             boolean created = false;
                             try {               // Recheck under lock
@@ -320,6 +334,7 @@ abstract class Striped64 extends Number {
                                 if ((rs = cells) != null &&
                                     (m = rs.length) > 0 &&
                                     rs[j = (m - 1) & h] == null) {
+                                    // 把新创建的cell 放入
                                     rs[j] = r;
                                     created = true;
                                 }
@@ -327,7 +342,7 @@ abstract class Striped64 extends Number {
                                 cellsBusy = 0;
                             }
                             if (created)
-                                break;
+                                break;  // 新创建了cell 则退出
                             continue;           // Slot is now non-empty
                         }
                     }
@@ -350,6 +365,7 @@ abstract class Striped64 extends Number {
                 else if (cellsBusy == 0 && casCellsBusy()) {
                     try {
                         if (cells == as) {      // Expand table unless stale
+                            // celll数组扩张
                             Cell[] rs = new Cell[n << 1];
                             for (int i = 0; i < n; ++i)
                                 rs[i] = as[i];
@@ -361,23 +377,32 @@ abstract class Striped64 extends Number {
                     collide = false;
                     continue;                   // Retry with expanded table
                 }
+                // 再次设置随机数种子
                 h = advanceProbe(h);
-            }
+            }   // cellBusy为0,且cells为null, 且 设置cellbusy值为1成功,则继续进行
             else if (cellsBusy == 0 && cells == as && casCellsBusy()) {
                 boolean init = false;
                 try {                           // Initialize table
+                    // 初始化cell数组
                     if (cells == as) {
+                        // 初始化数组
                         Cell[] rs = new Cell[2];
+                        // 并把值设置到 第一个位置
                         rs[h & 1] = new Cell(Double.doubleToRawLongBits(x));
+                        // 更新cells
                         cells = rs;
                         init = true;
                     }
                 } finally {
                     cellsBusy = 0;
                 }
-                if (init)
+                if (init)   // 进行了初始化,跳出循环
                     break;
             }
+            // ((fn == null)?Double.doubleToRawLongBits(Double.longBitsToDouble(v) + x):
+            // Double.doubleToRawLongBits(fn.applyAsDouble(Double.longBitsToDouble(v), x))))
+            // 如果fn参数为null,则直接使用相加值 Double.longBitsToDouble(v) + x
+            // 如果fn不为null, 则使用函数处理后的值fn.applyAsDouble(Double.longBitsToDouble(v), x)
             else if (casBase(v = base,
                              ((fn == null) ?
                               Double.doubleToRawLongBits
@@ -386,6 +411,7 @@ abstract class Striped64 extends Number {
                               (fn.applyAsDouble
                                (Double.longBitsToDouble(v), x)))))
                 break;                          // Fall back on using base
+                // 设置完成后 跳出循环
         }
     }
 
@@ -396,13 +422,17 @@ abstract class Striped64 extends Number {
     private static final long PROBE;
     static {
         try {
+            // cas 操作实例
             UNSAFE = sun.misc.Unsafe.getUnsafe();
             Class<?> sk = Striped64.class;
+            // base 字段的偏移地址
             BASE = UNSAFE.objectFieldOffset
                 (sk.getDeclaredField("base"));
+            // callsBusy偏移地址
             CELLSBUSY = UNSAFE.objectFieldOffset
                 (sk.getDeclaredField("cellsBusy"));
             Class<?> tk = Thread.class;
+            // 获取 threadLocalRandomProbe field
             PROBE = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomProbe"));
         } catch (Exception e) {

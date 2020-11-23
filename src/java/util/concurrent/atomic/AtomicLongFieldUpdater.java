@@ -367,7 +367,10 @@ public abstract class AtomicLongFieldUpdater<T> {
         } while (!compareAndSet(obj, prev, next));
         return next;
     }
-
+    /*
+    此是 unsafe支持cas直接操作 long类型
+    直接使用 cas的操作
+     */
     private static final class CASUpdater<T> extends AtomicLongFieldUpdater<T> {
         private static final sun.misc.Unsafe U = sun.misc.Unsafe.getUnsafe();
         private final long offset;
@@ -508,7 +511,9 @@ public abstract class AtomicLongFieldUpdater<T> {
             return getAndAdd(obj, delta) + delta;
         }
     }
-
+    /*
+     加锁的操作, 即操作是加上 synchronize关键字
+     */
     private static final class LockedUpdater<T> extends AtomicLongFieldUpdater<T> {
         private static final sun.misc.Unsafe U = sun.misc.Unsafe.getUnsafe();
         private final long offset;
@@ -611,6 +616,7 @@ public abstract class AtomicLongFieldUpdater<T> {
 
         public final void set(T obj, long newValue) {
             accessCheck(obj);
+            // 操作时 加上 synchronize 锁
             synchronized (this) {
                 U.putLong(obj, offset, newValue);
             }

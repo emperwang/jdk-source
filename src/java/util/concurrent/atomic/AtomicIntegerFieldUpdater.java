@@ -382,7 +382,9 @@ public abstract class AtomicIntegerFieldUpdater<T> {
         /** class holding the field */
         // target class
         private final Class<T> tclass;
-
+        // tclass 目标操作类
+        // fieldName 要操作的field的名字
+        // caller 调用者的类,即调用此AtomicIntegerFieldUpdater的类
         AtomicIntegerFieldUpdaterImpl(final Class<T> tclass,
                                       final String fieldName,
                                       final Class<?> caller) {
@@ -398,13 +400,15 @@ public abstract class AtomicIntegerFieldUpdater<T> {
                     });
                 // field的修饰符
                 modifiers = field.getModifiers();
+                // 相当于把修饰符修改为了public
                 sun.reflect.misc.ReflectUtil.ensureMemberAccess(
                     caller, tclass, null, modifiers);
-                // 类加载器
+                // 获取各自的 classloader
                 ClassLoader cl = tclass.getClassLoader();
                 ClassLoader ccl = caller.getClassLoader();
                 if ((ccl != null) && (ccl != cl) &&
                     ((cl == null) || !isAncestor(cl, ccl))) {
+                    // 检查package的权限
                     sun.reflect.misc.ReflectUtil.checkPackageAccess(tclass);
                 }
             } catch (PrivilegedActionException pae) {
@@ -412,10 +416,10 @@ public abstract class AtomicIntegerFieldUpdater<T> {
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
-
+            // 如果不是 int类型的值,则报错
             if (field.getType() != int.class)
                 throw new IllegalArgumentException("Must be integer type");
-
+            // 如果值没有被 volatile修饰,则报错
             if (!Modifier.isVolatile(modifiers))
                 throw new IllegalArgumentException("Must be volatile type");
 
@@ -426,11 +430,15 @@ public abstract class AtomicIntegerFieldUpdater<T> {
             // If the updater refers to a protected field of a declaring class
             // outside the current package, the receiver argument will be
             // narrowed to the type of the accessing class.
+            // 1. 修饰符是protected && tclass时caller的子类 && tclass和classer不同包
+            //     那么 cclass 为 caller
+            // 2. 否则  cclass 为 tclass
             this.cclass = (Modifier.isProtected(modifiers) &&
                            tclass.isAssignableFrom(caller) &&
                            !isSamePackage(tclass, caller))
                           ? caller : tclass;
             this.tclass = tclass;
+            // field的偏移地址
             this.offset = U.objectFieldOffset(field);
         }
 
@@ -471,7 +479,10 @@ public abstract class AtomicIntegerFieldUpdater<T> {
          * Checks that target argument is instance of cclass.  On
          * failure, throws cause.
          */
+        // 检查权限
         private final void accessCheck(T obj) {
+            // 检查要操作的obj是否是 cclass的 实例
+            // 如果不是cclass实例的话,则抛出异常
             if (!cclass.isInstance(obj))
                 throwAccessCheckException(obj);
         }
@@ -480,6 +491,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
          * Throws access exception if accessCheck failed due to
          * protected access, else ClassCastException.
          */
+        // 抛出检测出的 异常
         private final void throwAccessCheckException(T obj) {
             if (cclass == tclass)
                 throw new ClassCastException();
@@ -501,6 +513,7 @@ public abstract class AtomicIntegerFieldUpdater<T> {
 
         public final boolean weakCompareAndSet(T obj, int expect, int update) {
             accessCheck(obj);
+            // 设置obj offset偏移的field的值
             return U.compareAndSwapInt(obj, offset, expect, update);
         }
 

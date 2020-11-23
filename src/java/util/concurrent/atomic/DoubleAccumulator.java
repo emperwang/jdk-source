@@ -90,6 +90,7 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
     public DoubleAccumulator(DoubleBinaryOperator accumulatorFunction,
                              double identity) {
         this.function = accumulatorFunction;
+        // identity初始值
         base = this.identity = Double.doubleToRawLongBits(identity);
     }
 
@@ -105,13 +106,14 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
              (function.applyAsDouble
               (Double.longBitsToDouble(b = base), x))) != b  && !casBase(b, r)) {
             boolean uncontended = true;
-            if (as == null || (m = as.length - 1) < 0 ||
-                (a = as[getProbe() & m]) == null ||
+            if (as == null || (m = as.length - 1) < 0 ||        // as即cell数组为空,或者没有长度
+                (a = as[getProbe() & m]) == null ||             // as数组中 getProbe()&m 位置不存在值
                 !(uncontended =
                   (r = Double.doubleToRawLongBits
                    (function.applyAsDouble
                     (Double.longBitsToDouble(v = a.value), x))) == v ||
-                  a.cas(v, r)))
+                  a.cas(v, r)))     // a.cas设置cell中存储的值
+                //
                 doubleAccumulate(x, function, uncontended);
         }
     }
@@ -125,10 +127,12 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
      *
      * @return the current value
      */
+    // 获取最终的值
     public double get() {
         Cell[] as = cells; Cell a;
         double result = Double.longBitsToDouble(base);
         if (as != null) {
+            // 遍历cells数组中所有值 并使用 function累加 作为最终值
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
                     result = function.applyAsDouble
@@ -150,6 +154,7 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
         Cell[] as = cells; Cell a;
         base = identity;
         if (as != null) {
+            // 复位,即把cells数组中所有值 设置为初始值
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
                     a.value = identity;
@@ -172,6 +177,7 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
         double result = Double.longBitsToDouble(base);
         base = identity;
         if (as != null) {
+            // 遍历所有cells数组,获取其value的和并设置其value为初始值
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null) {
                     double v = Double.longBitsToDouble(a.value);
@@ -229,6 +235,7 @@ public class DoubleAccumulator extends Striped64 implements Serializable {
      * Striped64 superclass in serialized forms.
      * @serial include
      */
+    // 序列化代理
     private static class SerializationProxy implements Serializable {
         private static final long serialVersionUID = 7249069246863182397L;
 

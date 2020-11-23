@@ -61,9 +61,13 @@ public final class ReflectUtil {
                                           int modifiers)
         throws IllegalAccessException
     {
+        // 判断fieldd的修饰符 是否是 protected
         if (target == null && Modifier.isProtected(modifiers)) {
+            // 记录原来的修饰符
             int mods = modifiers;
+            // 取出 protected修改符
             mods = mods & (~Modifier.PROTECTED);
+            // 修改为 public修饰符
             mods = mods | Modifier.PUBLIC;
 
             /*
@@ -161,7 +165,9 @@ public final class ReflectUtil {
      * also check the package access on the proxy interfaces.
      */
     public static void checkPackageAccess(Class<?> clazz) {
+        // 检查package的access 权限
         checkPackageAccess(clazz.getName());
+        // 检测是否是 proxy 代理
         if (isNonPublicProxyClass(clazz)) {
             checkProxyPackageAccess(clazz);
         }

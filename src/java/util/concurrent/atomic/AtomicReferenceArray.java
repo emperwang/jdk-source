@@ -51,11 +51,15 @@ import sun.misc.Unsafe;
  */
 public class AtomicReferenceArray<E> implements java.io.Serializable {
     private static final long serialVersionUID = -6209656149925076980L;
-
+    // cas 操作类
     private static final Unsafe unsafe;
+    // 数组基址
     private static final int base;
+    // 获取偏移的 移位数
     private static final int shift;
+    // array 数组的 offset
     private static final long arrayFieldOffset;
+    // 对象数组
     private final Object[] array; // must have exact type Object[]
 
     static {
@@ -72,14 +76,14 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
             throw new Error(e);
         }
     }
-
+    // 健康性检查 以及 地址转换
     private long checkedByteOffset(int i) {
         if (i < 0 || i >= array.length)
             throw new IndexOutOfBoundsException("index " + i);
 
         return byteOffset(i);
     }
-
+    // 得到 对应 i 索引的偏移地址
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }
@@ -121,12 +125,15 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
      * @param i the index
      * @return the current value
      */
+    // 获取索引i位置的值
     public final E get(int i) {
+        // 先把索引i 转换为偏移地址,然后获取偏移地址的对应值
         return getRaw(checkedByteOffset(i));
     }
 
     @SuppressWarnings("unchecked")
     private E getRaw(long offset) {
+        // 获取对应偏移地址 offset的值
         return (E) unsafe.getObjectVolatile(array, offset);
     }
 
@@ -136,6 +143,8 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
      * @param i the index
      * @param newValue the new value
      */
+    // 设置索引i位置的值
+    // 先把i转换为偏移地址, 然后把 newValue设置进去
     public final void set(int i, E newValue) {
         unsafe.putObjectVolatile(array, checkedByteOffset(i), newValue);
     }
@@ -161,6 +170,9 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
      */
     @SuppressWarnings("unchecked")
     public final E getAndSet(int i, E newValue) {
+        // 1. 先转换地址
+        // 2. 获取原来的值
+        // 3. 设置新的值  cas 操作
         return (E)unsafe.getAndSetObject(array, checkedByteOffset(i), newValue);
     }
 
@@ -177,7 +189,7 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
     public final boolean compareAndSet(int i, E expect, E update) {
         return compareAndSetRaw(checkedByteOffset(i), expect, update);
     }
-
+    /// cas设置offset位置上的值
     private boolean compareAndSetRaw(long offset, E expect, E update) {
         return unsafe.compareAndSwapObject(array, offset, expect, update);
     }
@@ -315,6 +327,7 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
     /**
      * Reconstitutes the instance from a stream (that is, deserializes it).
      */
+    // 反序列化方式
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException,
         java.io.InvalidObjectException {

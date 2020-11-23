@@ -51,6 +51,8 @@ import sun.misc.Unsafe;
  * @since 1.5
  * @author Doug Lea
  */
+// long类型的 原子操作
+// 不得不说 unsafe直接支持了对long类型的cas操作,故看起来和 AtomicInteger的操作很相似
 public class AtomicLong extends Number implements java.io.Serializable {
     private static final long serialVersionUID = 1927816293512124184L;
 
@@ -131,6 +133,7 @@ public class AtomicLong extends Number implements java.io.Serializable {
      * @return the previous value
      */
     public final long getAndSet(long newValue) {
+        // 这里可以看到 unsafe 内置了对long类型的值的直接 cas 操作
         return unsafe.getAndSetLong(this, valueOffset, newValue);
     }
 
@@ -188,6 +191,7 @@ public class AtomicLong extends Number implements java.io.Serializable {
      * @return the previous value
      */
     public final long getAndAdd(long delta) {
+        // 直接的long类型的操作
         return unsafe.getAndAddLong(this, valueOffset, delta);
     }
 

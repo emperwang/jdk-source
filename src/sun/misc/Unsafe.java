@@ -40,7 +40,7 @@ import sun.reflect.Reflection;
  * @author John R. Rose
  * @see #getUnsafe
  */
-
+// cas 的操作类,内部大都是 native 方法
 public final class Unsafe {
 
     private static native void registerNatives();
@@ -884,6 +884,10 @@ public final class Unsafe {
      * @return <tt>true</tt> if successful
      */
     // 原子的更新一个对象 offset偏移地址的值
+    // Object 要处理的对象
+    // offset 要处理field的偏移地址
+    // expected 期望的值,即原来的值
+    // x newValue,即要设置的值
     public final native boolean compareAndSwapInt(Object o, long offset,
                                                   int expected,
                                                   int x);
@@ -893,6 +897,7 @@ public final class Unsafe {
      * holding <tt>expected</tt>.
      * @return <tt>true</tt> if successful
      */
+    // cas直接操作 long类型的值
     public final native boolean compareAndSwapLong(Object o, long offset,
                                                    long expected,
                                                    long x);
@@ -910,6 +915,7 @@ public final class Unsafe {
     public native void    putObjectVolatile(Object o, long offset, Object x);
 
     /** Volatile version of {@link #getInt(Object, long)}  */
+    // 获取对象 object 偏移 ofobjectFieldOffsetfset的值
     public native int     getIntVolatile(Object o, long offset);
 
     /** Volatile version of {@link #putInt(Object, long, int)}  */
@@ -940,6 +946,7 @@ public final class Unsafe {
     public native void    putCharVolatile(Object o, long offset, char x);
 
     /** Volatile version of {@link #getLong(Object, long)}  */
+    // 获取object offset位置的 long类型的值
     public native long    getLongVolatile(Object o, long offset);
 
     /** Volatile version of {@link #putLong(Object, long, long)}  */
@@ -967,6 +974,9 @@ public final class Unsafe {
     public native void    putOrderedObject(Object o, long offset, Object x);
 
     /** Ordered/Lazy version of {@link #putIntVolatile(Object, long, int)}  */
+    // object 要处理的对象
+    // offset 内存偏移地址
+    // x 要更新的值
     public native void    putOrderedInt(Object o, long offset, int x);
 
     /** Ordered/Lazy version of {@link #putLongVolatile(Object, long, long)} */
@@ -1030,6 +1040,9 @@ public final class Unsafe {
      * @return the previous value
      * @since 1.8
      */
+    // 增加offset对应的值
+    // 1. 首先获取原来的值
+    // 2. 然后使用增加后的值 cas操作
     public final int getAndAddInt(Object o, long offset, int delta) {
         int v;
         do {
@@ -1053,7 +1066,9 @@ public final class Unsafe {
     public final long getAndAddLong(Object o, long offset, long delta) {
         long v;
         do {
+            // 获取 offset对应的 原始值
             v = getLongVolatile(o, offset);
+            // 使用 v+delta 来替换 offset位置原来的值
         } while (!compareAndSwapLong(o, offset, v, v + delta));
         return v;
     }
@@ -1075,6 +1090,7 @@ public final class Unsafe {
         do {
             // 获取对象偏移地址为 offset的值
             v = getIntVolatile(o, offset);
+            // cas 操作
         } while (!compareAndSwapInt(o, offset, v, newValue));
         return v;
     }
@@ -1093,7 +1109,9 @@ public final class Unsafe {
     public final long getAndSetLong(Object o, long offset, long newValue) {
         long v;
         do {
+            // 获取对应的 offset对应的long值
             v = getLongVolatile(o, offset);
+            // 使用新的值来更新
         } while (!compareAndSwapLong(o, offset, v, newValue));
         return v;
     }
@@ -1112,7 +1130,9 @@ public final class Unsafe {
     public final Object getAndSetObject(Object o, long offset, Object newValue) {
         Object v;
         do {
+            // 获取原始值
             v = getObjectVolatile(o, offset);
+            // cas 操作设置新的值
         } while (!compareAndSwapObject(o, offset, v, newValue));
         return v;
     }

@@ -49,8 +49,12 @@ package java.util.concurrent.atomic;
  */
 public class AtomicMarkableReference<V> {
 
+    // 使用 pair 封装 要修改的对象
+    // 记录目标对象 和 一个标记 mark
     private static class Pair<T> {
+        // 要修改的对象
         final T reference;
+        // 标记是否修改过
         final boolean mark;
         private Pair(T reference, boolean mark) {
             this.reference = reference;
@@ -60,7 +64,7 @@ public class AtomicMarkableReference<V> {
             return new Pair<T>(reference, mark);
         }
     }
-
+    // 真正修改时 修改的是封装对象 pair
     private volatile Pair<V> pair;
 
     /**
@@ -70,6 +74,7 @@ public class AtomicMarkableReference<V> {
      * @param initialRef the initial reference
      * @param initialMark the initial mark
      */
+    // 初始化创建
     public AtomicMarkableReference(V initialRef, boolean initialMark) {
         pair = Pair.of(initialRef, initialMark);
     }
@@ -79,6 +84,7 @@ public class AtomicMarkableReference<V> {
      *
      * @return the current value of the reference
      */
+    // 返回对象引用
     public V getReference() {
         return pair.reference;
     }
@@ -100,6 +106,7 @@ public class AtomicMarkableReference<V> {
      * {@code markholder[0]} will hold the value of the mark.
      * @return the current value of the reference
      */
+    // 此函数返回pair两个值,第一个是返回对象, 通过参数 markHolder来记录对象的mark
     public V get(boolean[] markHolder) {
         Pair<V> pair = this.pair;
         markHolder[0] = pair.mark;
@@ -147,12 +154,16 @@ public class AtomicMarkableReference<V> {
                                  boolean expectedMark,
                                  boolean newMark) {
         Pair<V> current = pair;
+        // 1. expectRed == pair.ref && expectMark== pair.mark && newRef == pair.ref && newMark==pair.mark
+        //      直接返回 true
+        // 2. expectRed == pair.ref && expectMark== pair.mark && casPair成功,则返回true
+        // 由此可见cas操作时, 是直接操作Pair封装对象,而非直接操作对象
         return
             expectedReference == current.reference &&
             expectedMark == current.mark &&
             ((newReference == current.reference &&
               newMark == current.mark) ||
-             casPair(current, Pair.of(newReference, newMark)));
+             casPair(current, Pair.of(newReference, newMark)));     // cas操作pair对象
     }
 
     /**
@@ -161,6 +172,8 @@ public class AtomicMarkableReference<V> {
      * @param newReference the new value for the reference
      * @param newMark the new value for the mark
      */
+    // 设置新的值
+    // 即使用新的值创建了新的 pair对象
     public void set(V newReference, boolean newMark) {
         Pair<V> current = pair;
         if (newReference != current.reference || newMark != current.mark)
@@ -180,6 +193,7 @@ public class AtomicMarkableReference<V> {
      * @param newMark the new value for the mark
      * @return {@code true} if successful
      */
+    // 为对象设置一个新的 mark值
     public boolean attemptMark(V expectedReference, boolean newMark) {
         Pair<V> current = pair;
         return
@@ -189,16 +203,17 @@ public class AtomicMarkableReference<V> {
     }
 
     // Unsafe mechanics
-
+    // cas 操作实现类
     private static final sun.misc.Unsafe UNSAFE = sun.misc.Unsafe.getUnsafe();
+    // pair的偏移地址
     private static final long pairOffset =
         objectFieldOffset(UNSAFE, "pair", AtomicMarkableReference.class);
-
+    // cas直接操作对象
     private boolean casPair(Pair<V> cmp, Pair<V> val) {
         // 此处交换时,交换 pair对象
         return UNSAFE.compareAndSwapObject(this, pairOffset, cmp, val);
     }
-
+    // 获取对象对应field的偏移地址
     static long objectFieldOffset(sun.misc.Unsafe UNSAFE,
                                   String field, Class<?> klazz) {
         try {

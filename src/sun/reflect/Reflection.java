@@ -93,7 +93,7 @@ public class Reflection {
         if (currentClass == null || memberClass == null) {
             throw new InternalError();
         }
-
+        // 校验是否能 access
         if (!verifyMemberAccess(currentClass, memberClass, target, modifiers)) {
             throw new IllegalAccessException("Class " + currentClass.getName() +
                                              " can not access a member of class " +
@@ -103,7 +103,7 @@ public class Reflection {
                                              "\"");
         }
     }
-
+    // 验证field是否能 access
     public static boolean verifyMemberAccess(Class<?> currentClass,
                                              // Declaring class of field
                                              // or method
@@ -118,60 +118,70 @@ public class Reflection {
 
         boolean gotIsSameClassPackage = false;
         boolean isSameClassPackage = false;
-
+        // 如果currentClass 和 memberClass是同一个实例,是可以访问的
+        // currentClass是调用者类
+        // memberClass是被调用者
         if (currentClass == memberClass) {
             // Always succeeds
             return true;
         }
-
+        // 如果memberClass类不是 public修饰符
         if (!Modifier.isPublic(getClassAccessFlags(memberClass))) {
+            // currentClass 和 memberClass 是否是同一个package
             isSameClassPackage = isSameClassPackage(currentClass, memberClass);
             gotIsSameClassPackage = true;
+            // 如果不是同一个package,则不能访问
             if (!isSameClassPackage) {
                 return false;
             }
         }
 
         // At this point we know that currentClass can access memberClass.
-
+        // 如果要访问的field修饰符是 public,则可以访问
         if (Modifier.isPublic(modifiers)) {
             return true;
         }
 
         boolean successSoFar = false;
-
+        // 如果 field修饰符是 protected
         if (Modifier.isProtected(modifiers)) {
             // See if currentClass is a subclass of memberClass
+            // 判断 currentClass是否是 memberClass的子类
             if (isSubclassOf(currentClass, memberClass)) {
                 successSoFar = true;
             }
         }
-
+        // 不是子类, 且修饰符不是 private
         if (!successSoFar && !Modifier.isPrivate(modifiers)) {
+            //
             if (!gotIsSameClassPackage) {
                 isSameClassPackage = isSameClassPackage(currentClass,
                                                         memberClass);
                 gotIsSameClassPackage = true;
             }
-
+            // 如果是同package
             if (isSameClassPackage) {
                 successSoFar = true;
             }
         }
-
+        // 不是子类,也不在同一个包,则不可访问
         if (!successSoFar) {
             return false;
         }
-
+            // 如果 field修饰符是 protected
         if (Modifier.isProtected(modifiers)) {
             // Additional test for protected members: JLS 6.6.2
             Class<?> targetClass = (target == null ? memberClass : target.getClass());
             if (targetClass != currentClass) {
                 if (!gotIsSameClassPackage) {
+                    // 是否是同package
                     isSameClassPackage = isSameClassPackage(currentClass, memberClass);
                     gotIsSameClassPackage = true;
                 }
+                // 不是同package
                 if (!isSameClassPackage) {
+                    // 也不是子类
+                    // 那不允许访问
                     if (!isSubclassOf(targetClass, currentClass)) {
                         return false;
                     }

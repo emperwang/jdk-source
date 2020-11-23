@@ -45,6 +45,7 @@ import sun.misc.Unsafe;
  * @since 1.5
  * @author Doug Lea
  */
+// 操作类似于 AtomicIntegerArray操作
 public class AtomicLongArray implements java.io.Serializable {
     private static final long serialVersionUID = -2308431214976778248L;
 

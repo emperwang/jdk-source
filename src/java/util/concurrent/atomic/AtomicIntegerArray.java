@@ -60,9 +60,10 @@ public class AtomicIntegerArray implements java.io.Serializable {
         int scale = unsafe.arrayIndexScale(int[].class);
         if ((scale & (scale - 1)) != 0)
             throw new Error("data type scale not a power of two");
+        // 位移
         shift = 31 - Integer.numberOfLeadingZeros(scale);
     }
-
+    // 先进行安全性检测  之后返回相对应的地址
     private long checkedByteOffset(int i) {
         if (i < 0 || i >= array.length)
             throw new IndexOutOfBoundsException("index " + i);
@@ -70,6 +71,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
         return byteOffset(i);
     }
     // 地址转换
+    // 把i位置 转换为 对应的地址
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }
@@ -117,6 +119,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
     // 获取值
     private int getRaw(long offset) {
+        // 获取 array对应 offset的值, 此处的offset是相对array内存起始位置的偏移
         return unsafe.getIntVolatile(array, offset);
     }
 
@@ -127,7 +130,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param newValue the new value
      */
     public final void set(int i, int newValue) {
-        // 设置值
+        // 设置array数组中 i 对应的offset的值
         unsafe.putIntVolatile(array, checkedByteOffset(i), newValue);
     }
 
@@ -164,10 +167,11 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @return {@code true} if successful. False return indicates that
      * the actual value was not equal to the expected value.
      */
+    // cas 操作
     public final boolean compareAndSet(int i, int expect, int update) {
         return compareAndSetRaw(checkedByteOffset(i), expect, update);
     }
-
+    // 直接就是cas操作了
     private boolean compareAndSetRaw(long offset, int expect, int update) {
         return unsafe.compareAndSwapInt(array, offset, expect, update);
     }
@@ -195,6 +199,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param i the index
      * @return the previous value
      */
+    // 获取原来的值,把设置i位置的值加1
     public final int getAndIncrement(int i) {
         return getAndAdd(i, 1);
     }
@@ -205,6 +210,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param i the index
      * @return the previous value
      */
+    // 获取原来的值,并把原来的值减1
     public final int getAndDecrement(int i) {
         return getAndAdd(i, -1);
     }
@@ -216,6 +222,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param delta the value to add
      * @return the previous value
      */
+    // cas操作
     public final int getAndAdd(int i, int delta) {
         return unsafe.getAndAddInt(array, checkedByteOffset(i), delta);
     }
@@ -226,6 +233,8 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param i the index
      * @return the updated value
      */
+    // 获取的是原来的值 + 1
+    // 即不是原来的值
     public final int incrementAndGet(int i) {
         return getAndAdd(i, 1) + 1;
     }
@@ -236,6 +245,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param i the index
      * @return the updated value
      */
+    // 获取的是 原来的值 -1
     public final int decrementAndGet(int i) {
         return getAndAdd(i, -1) - 1;
     }
@@ -247,6 +257,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @param delta the value to add
      * @return the updated value
      */
+    // 先获取原来的值,之后再把原来的值加delta 并返回
     public final int addAndGet(int i, int delta) {
         return getAndAdd(i, delta) + delta;
     }
@@ -264,11 +275,15 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * @since 1.8
      */
     public final int getAndUpdate(int i, IntUnaryOperator updateFunction) {
+        //  转换为offset
         long offset = checkedByteOffset(i);
         int prev, next;
         do {
+            // 获取原来的值
             prev = getRaw(offset);
+            // 函数操作后的值
             next = updateFunction.applyAsInt(prev);
+            // cas
         } while (!compareAndSetRaw(offset, prev, next));
         return prev;
     }

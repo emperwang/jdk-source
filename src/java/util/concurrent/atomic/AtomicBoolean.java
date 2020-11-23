@@ -50,16 +50,20 @@ import sun.misc.Unsafe;
 public class AtomicBoolean implements java.io.Serializable {
     private static final long serialVersionUID = 4654671469794556979L;
     // setup to use Unsafe.compareAndSwapInt for updates
+    // 具体的 CAS 处理函数
     private static final Unsafe unsafe = Unsafe.getUnsafe();
     private static final long valueOffset;
 
     static {
         try {
+            // 获取类的field 对应的偏移地址
             valueOffset = unsafe.objectFieldOffset
                 (AtomicBoolean.class.getDeclaredField("value"));
         } catch (Exception ex) { throw new Error(ex); }
     }
-
+    // 存储值
+    // 0 代表false, 1 代表 true
+    // 可见此处的 boolean操作其实是转换为 整数操作
     private volatile int value;
 
     /**
@@ -82,6 +86,7 @@ public class AtomicBoolean implements java.io.Serializable {
      *
      * @return the current value
      */
+    // value不为0,则为true
     public final boolean get() {
         return value != 0;
     }
@@ -98,6 +103,7 @@ public class AtomicBoolean implements java.io.Serializable {
     public final boolean compareAndSet(boolean expect, boolean update) {
         int e = expect ? 1 : 0;
         int u = update ? 1 : 0;
+        // cas 操作
         return unsafe.compareAndSwapInt(this, valueOffset, e, u);
     }
 
@@ -124,6 +130,7 @@ public class AtomicBoolean implements java.io.Serializable {
      *
      * @param newValue the new value
      */
+    // 如果为真,则把值设置为true, 如果为false,则把值设置为0
     public final void set(boolean newValue) {
         value = newValue ? 1 : 0;
     }
@@ -145,10 +152,13 @@ public class AtomicBoolean implements java.io.Serializable {
      * @param newValue the new value
      * @return the previous value
      */
+    // 获取原来的值,并设置新的值
     public final boolean getAndSet(boolean newValue) {
         boolean prev;
         do {
+            // 获取原来的值
             prev = get();
+            // 设置新的值
         } while (!compareAndSet(prev, newValue));
         return prev;
     }

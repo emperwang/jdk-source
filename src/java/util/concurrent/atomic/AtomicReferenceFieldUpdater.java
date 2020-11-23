@@ -282,9 +282,10 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
         } while (!compareAndSet(obj, prev, next));
         return next;
     }
-
+    // AtomicReferenceFieldUpdater的真正实现
     private static final class AtomicReferenceFieldUpdaterImpl<T,V>
         extends AtomicReferenceFieldUpdater<T,V> {
+        // cas 操作实例
         private static final sun.misc.Unsafe U = sun.misc.Unsafe.getUnsafe();
         private final long offset;
         /**
@@ -308,24 +309,31 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * updateCheck methods are invoked when these faster
          * screenings fail.
          */
-
+        // 总的处理流程和 integerFieldUpdater 和 longFieldUpdater 相似
+        // vclass : the class of the field
         AtomicReferenceFieldUpdaterImpl(final Class<T> tclass,
                                         final Class<V> vclass,
                                         final String fieldName,
                                         final Class<?> caller) {
             final Field field;
+            // 要修改的field的 class 类型
             final Class<?> fieldClass;
+            // field的修饰符
             final int modifiers;
             try {
+                // 获取field
                 field = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Field>() {
                         public Field run() throws NoSuchFieldException {
                             return tclass.getDeclaredField(fieldName);
                         }
                     });
+                // 获取field的修饰符
                 modifiers = field.getModifiers();
+                // 保证可以access
                 sun.reflect.misc.ReflectUtil.ensureMemberAccess(
                     caller, tclass, null, modifiers);
+                // classLoader
                 ClassLoader cl = tclass.getClassLoader();
                 ClassLoader ccl = caller.getClassLoader();
                 if ((ccl != null) && (ccl != cl) &&
@@ -341,9 +349,10 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
 
             if (vclass != fieldClass)
                 throw new ClassCastException();
+            // 如果是基本类型 报错
             if (vclass.isPrimitive())
                 throw new IllegalArgumentException("Must be reference type");
-
+            //  field 必须由  volatile修饰
             if (!Modifier.isVolatile(modifiers))
                 throw new IllegalArgumentException("Must be volatile type");
 
@@ -368,6 +377,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * classloader's delegation chain.
          * Equivalent to the inaccessible: first.isAncestor(second).
          */
+        // 两个classLoader是否是 父子类
         private static boolean isAncestor(ClassLoader first, ClassLoader second) {
             ClassLoader acl = first;
             do {
@@ -383,6 +393,8 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * Returns true if the two classes have the same class loader and
          * package qualifier
          */
+        // 是否是同一个包
+        // 1. package名相同&&classLoader相同,才是同一个package
         private static boolean isSamePackage(Class<?> class1, Class<?> class2) {
             return class1.getClassLoader() == class2.getClassLoader()
                    && Objects.equals(getPackageName(class1), getPackageName(class2));
@@ -398,6 +410,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * Checks that target argument is instance of cclass.  On
          * failure, throws cause.
          */
+        // 检查真实操作的obj对象时 cclass的实例
         private final void accessCheck(T obj) {
             if (!cclass.isInstance(obj))
                 throwAccessCheckException(obj);
@@ -420,7 +433,8 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
                         " using an instance of " +
                         obj.getClass().getName()));
         }
-
+        // 要设置的值 v的类型检测
+        // 如果是null 或者 不是 vclass的实例,则报错
         private final void valueCheck(V v) {
             if (v != null && !(vclass.isInstance(v)))
                 throwCCE();
@@ -429,7 +443,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
         static void throwCCE() {
             throw new ClassCastException();
         }
-
+        // cas 直接修改类
         public final boolean compareAndSet(T obj, V expect, V update) {
             accessCheck(obj);
             valueCheck(update);
@@ -446,6 +460,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
         public final void set(T obj, V newValue) {
             accessCheck(obj);
             valueCheck(newValue);
+            // 原子设置value
             U.putObjectVolatile(obj, offset, newValue);
         }
 
@@ -458,6 +473,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
         @SuppressWarnings("unchecked")
         public final V get(T obj) {
             accessCheck(obj);
+            // 获取 value
             return (V)U.getObjectVolatile(obj, offset);
         }
 
