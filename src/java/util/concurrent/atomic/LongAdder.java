@@ -67,6 +67,9 @@ import java.io.Serializable;
  * @since 1.8
  * @author Doug Lea
  */
+// 可以看到 LongAddr和 LongAcculator的最大区别就是:
+// 1.LongAddr 只允许增加 和 减少值
+// 2. LongAccumator允许设置初值, 并使用自定义的 function进行累加操作
 public class LongAdder extends Striped64 implements Serializable {
     private static final long serialVersionUID = 7249069246863182397L;
 
@@ -83,18 +86,20 @@ public class LongAdder extends Striped64 implements Serializable {
      */
     public void add(long x) {
         Cell[] as; long b, v; int m; Cell a;
-        if ((as = cells) != null || !casBase(b = base, b + x)) {
+        if ((as = cells) != null || !casBase(b = base, b + x)) {        // 第一次尝试把值直接添加到 base上
             boolean uncontended = true;
             if (as == null || (m = as.length - 1) < 0 ||
                 (a = as[getProbe() & m]) == null ||
-                !(uncontended = a.cas(v = a.value, v + x)))
-                longAccumulate(x, null, uncontended);
+                !(uncontended = a.cas(v = a.value, v + x)))     // 第二次尝试把值直接添加到 cell数组中
+                // 可以看到局部变量 uncontented 表示设置cell值是否成功
+                longAccumulate(x, null, uncontended);   // 两次都没有成功,则调用到此
         }
     }
 
     /**
      * Equivalent to {@code add(1)}.
      */
+    // 自增操作
     public void increment() {
         add(1L);
     }
@@ -102,6 +107,7 @@ public class LongAdder extends Striped64 implements Serializable {
     /**
      * Equivalent to {@code add(-1)}.
      */
+    // 自减操作
     public void decrement() {
         add(-1L);
     }
@@ -118,6 +124,8 @@ public class LongAdder extends Striped64 implements Serializable {
     public long sum() {
         Cell[] as = cells; Cell a;
         long sum = base;
+        // 获取最终值
+        // 即把 cell数据中的值 和 base的值求和 返回
         if (as != null) {
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
@@ -137,6 +145,7 @@ public class LongAdder extends Striped64 implements Serializable {
     public void reset() {
         Cell[] as = cells; Cell a;
         base = 0L;
+        // 复位既是把 cell数组中的值 设置为0值
         if (as != null) {
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
@@ -159,6 +168,8 @@ public class LongAdder extends Striped64 implements Serializable {
         Cell[] as = cells; Cell a;
         long sum = base;
         base = 0L;
+        // 把对应的cell值统计后,把其设置为0
+        // 即得到了 sum总结的效果,也达到了 reset的效果
         if (as != null) {
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null) {

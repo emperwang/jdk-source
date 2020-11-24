@@ -217,10 +217,12 @@ abstract class Striped64 extends Number {
      * avoids the need for an extra field or function in LongAdder).
      * @param wasUncontended false if CAS failed before call
      */
+    // long值的  累加
     final void longAccumulate(long x, LongBinaryOperator fn,
                               boolean wasUncontended) {
         int h;
         if ((h = getProbe()) == 0) {
+            // 初始化随机值
             ThreadLocalRandom.current(); // force initialization
             h = getProbe();
             wasUncontended = true;
@@ -228,14 +230,16 @@ abstract class Striped64 extends Number {
         boolean collide = false;                // True if last slot nonempty
         for (;;) {
             Cell[] as; Cell a; int n; long v;
-            if ((as = cells) != null && (n = as.length) > 0) {
-                if ((a = as[(n - 1) & h]) == null) {
+            if ((as = cells) != null && (n = as.length) > 0) {  // -- cell 数组不为空
+                if ((a = as[(n - 1) & h]) == null) {    // -- 索引对应位置为null
                     if (cellsBusy == 0) {       // Try to attach new Cell
+                        // 创建新cell
                         Cell r = new Cell(x);   // Optimistically create
-                        if (cellsBusy == 0 && casCellsBusy()) {
+                        if (cellsBusy == 0 && casCellsBusy()) { // 设置 cellBusy,表示繁忙
                             boolean created = false;
                             try {               // Recheck under lock
                                 Cell[] rs; int m, j;
+                                // 再次进行检测, 并把创建的cell放进数组中
                                 if ((rs = cells) != null &&
                                     (m = rs.length) > 0 &&
                                     rs[j = (m - 1) & h] == null) {
@@ -251,9 +255,11 @@ abstract class Striped64 extends Number {
                         }
                     }
                     collide = false;
-                }
+                }   // -- 索引对应位置为null
+                // 前面add操作(LongAddr中函数) cas设置base值失败
                 else if (!wasUncontended)       // CAS already known to fail
                     wasUncontended = true;      // Continue after rehash
+                // 尝试设置 对应 cell的值
                 else if (a.cas(v = a.value, ((fn == null) ? v + x :
                                              fn.applyAsLong(v, x))))
                     break;
@@ -263,6 +269,7 @@ abstract class Striped64 extends Number {
                     collide = true;
                 else if (cellsBusy == 0 && casCellsBusy()) {
                     try {
+                        // 扩展 cells数组,然后再次进行尝试
                         if (cells == as) {      // Expand table unless stale
                             Cell[] rs = new Cell[n << 1];
                             for (int i = 0; i < n; ++i)
@@ -276,10 +283,11 @@ abstract class Striped64 extends Number {
                     continue;                   // Retry with expanded table
                 }
                 h = advanceProbe(h);
-            }
-            else if (cellsBusy == 0 && cells == as && casCellsBusy()) {
+            } // -- cell 数组不为空
+            else if (cellsBusy == 0 && cells == as && casCellsBusy()) { // -- cell数组为空
                 boolean init = false;
                 try {                           // Initialize table
+                    // 如果cells数组为空,则尝试初始化 cell数组, 并把值设置到 cell数组中
                     if (cells == as) {
                         Cell[] rs = new Cell[2];
                         rs[h & 1] = new Cell(x);
@@ -291,7 +299,8 @@ abstract class Striped64 extends Number {
                 }
                 if (init)
                     break;
-            }
+            } // -- 处理cell数组为空
+            // cell 数组为空,则是cellBusy,则尝试吧值直接添加到 base上
             else if (casBase(v = base, ((fn == null) ? v + x :
                                         fn.applyAsLong(v, x))))
                 break;                          // Fall back on using base

@@ -79,8 +79,9 @@ import java.util.function.LongBinaryOperator;
  */
 public class LongAccumulator extends Striped64 implements Serializable {
     private static final long serialVersionUID = 7249069246863182397L;
-
+    // 操作 action
     private final LongBinaryOperator function;
+    // 初始化
     private final long identity;
 
     /**
@@ -103,13 +104,14 @@ public class LongAccumulator extends Striped64 implements Serializable {
     public void accumulate(long x) {
         Cell[] as; long b, v, r; int m; Cell a;
         if ((as = cells) != null ||
-            (r = function.applyAsLong(b = base, x)) != b && !casBase(b, r)) {
+            (r = function.applyAsLong(b = base, x)) != b && !casBase(b, r)) {   // 第一次尝试设置base值
             boolean uncontended = true;
             if (as == null || (m = as.length - 1) < 0 ||
                 (a = as[getProbe() & m]) == null ||
                 !(uncontended =
                   (r = function.applyAsLong(v = a.value, x)) == v ||
-                  a.cas(v, r)))
+                  a.cas(v, r)))             // 第二次尝试设置 cell 的值
+                // 如果尝试都失败,则调用到此
                 longAccumulate(x, function, uncontended);
         }
     }
@@ -126,6 +128,7 @@ public class LongAccumulator extends Striped64 implements Serializable {
     public long get() {
         Cell[] as = cells; Cell a;
         long result = base;
+        // 遍历cells 并应用function 求出最后的结果
         if (as != null) {
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
@@ -146,6 +149,8 @@ public class LongAccumulator extends Striped64 implements Serializable {
     public void reset() {
         Cell[] as = cells; Cell a;
         base = identity;
+        // 把cells数组中的值设置为初始值
+        // 而LongAddr 复位时,是把是设置为 0
         if (as != null) {
             for (int i = 0; i < as.length; ++i) {
                 if ((a = as[i]) != null)
