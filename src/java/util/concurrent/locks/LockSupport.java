@@ -117,9 +117,11 @@ import sun.misc.Unsafe;
  *   }
  * }}</pre>
  */
+// 此类是 并发锁实现所依赖的对 线程阻塞唤醒的工具类
+// 此LockSupport是 unsafe的包装类
 public class LockSupport {
     private LockSupport() {} // Cannot be instantiated.
-
+    // 向 parkBlocker 设置 block
     private static void setBlocker(Thread t, Object arg) {
         // Even though volatile, hotspot doesn't need a write barrier here.
         UNSAFE.putObject(t, parkBlockerOffset, arg);
@@ -169,10 +171,15 @@ public class LockSupport {
      *        thread parking
      * @since 1.6
      */
+    // 暂停一个 thread的运行
     public static void park(Object blocker) {
+        // 获取当前线程
         Thread t = Thread.currentThread();
+        // 设置阻塞点
         setBlocker(t, blocker);
+        //
         UNSAFE.park(false, 0L);
+        // 情况阻塞点
         setBlocker(t, null);
     }
 
@@ -209,9 +216,10 @@ public class LockSupport {
      * @since 1.6
      */
     public static void parkNanos(Object blocker, long nanos) {
-        if (nanos > 0) {
+        if (nanos > 0) {    // 过期时间的安全性检测
             Thread t = Thread.currentThread();
             setBlocker(t, blocker);
+            // 调用park时,设置了过期时间
             UNSAFE.park(false, nanos);
             setBlocker(t, null);
         }
@@ -253,6 +261,7 @@ public class LockSupport {
     public static void parkUntil(Object blocker, long deadline) {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
+        // 为park设置了 deadline时间,当deadline时间到期时,线程会唤醒
         UNSAFE.park(true, deadline);
         setBlocker(t, null);
     }
@@ -301,6 +310,7 @@ public class LockSupport {
      * for example, the interrupt status of the thread upon return.
      */
     public static void park() {
+        // 直接阻塞当前线程
         UNSAFE.park(false, 0L);
     }
 
@@ -398,14 +408,20 @@ public class LockSupport {
     private static final long SECONDARY;
     static {
         try {
+            // unsafe 操作实例
             UNSAFE = sun.misc.Unsafe.getUnsafe();
+            // 操作类
             Class<?> tk = Thread.class;
+            // thread类中parkBlocker的偏移地址
             parkBlockerOffset = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("parkBlocker"));
+            // thread中threadLocalRandomSeed 偏移地址
             SEED = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomSeed"));
+            // thread中 threadLocalRandomProbe 偏移地址
             PROBE = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomProbe"));
+            // thread 中threadLocalRandomSecondarySeed 偏移地址
             SECONDARY = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomSecondarySeed"));
         } catch (Exception ex) { throw new Error(ex); }

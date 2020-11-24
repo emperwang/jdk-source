@@ -994,6 +994,8 @@ public final class Unsafe {
      * @param thread the thread to unpark.
      *
      */
+    // 消除线程的阻塞
+    // 如果调用unpark时,线程未阻塞,则再次调用park时,不会阻塞线程
     public native void unpark(Object thread);
 
     /**
@@ -1007,6 +1009,11 @@ public final class Unsafe {
      * because <tt>unpark</tt> is, so it would be strange to place it
      * elsewhere.
      */
+    // 阻塞当前线程
+    // 1. 当调用unpark时 返回
+    // 2. interrupted时 返回
+    // 3. isAbsolute=false,time>0, 时间到期时 返回
+    // 4. isAbsolute=true,time为deadline时间, 当deadline时间到期
     public native void park(boolean isAbsolute, long time);
 
     /**

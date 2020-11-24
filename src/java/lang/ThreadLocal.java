@@ -718,5 +718,5 @@ public class ThreadLocal<T> {
                     expungeStaleEntry(j);
             }
         }
-    }
+    }  // --threadLocalMap
 }
