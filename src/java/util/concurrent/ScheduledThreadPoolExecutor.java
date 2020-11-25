@@ -192,6 +192,9 @@ public class ScheduledThreadPoolExecutor
          * indicates fixed-delay execution.  A value of 0 indicates a
          * non-repeating task.
          */
+        // 0 表示 non-repeat task
+        // 正值  表示周期执行的任务
+        // 负值  表示延迟执行的任务
         private final long period;
 
         /** The actual task to be re-enqueued by reExecutePeriodic */
@@ -298,6 +301,7 @@ public class ScheduledThreadPoolExecutor
             else if (ScheduledFutureTask.super.runAndReset()) { // 重复执行
                 // 此会根据  period 来设置下一次执行的时间
                 setNextRunTime();       // 设置下次运行的时间
+                // 再次把任务添加到队列中
                 reExecutePeriodic(outerTask);
             }
         }
