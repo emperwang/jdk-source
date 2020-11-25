@@ -61,9 +61,11 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
     boolean destroyed;
     boolean daemon;
     boolean vmAllowSuspension;
-
+    // 记录启动失败的线程数
     int nUnstartedThreads = 0;
+    // 线程组中的线程数
     int nthreads;
+    // 存储此线程组中的线程
     Thread threads[];
 
     int ngroups;
@@ -344,6 +346,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
                 return 0;
             }
             result = nthreads;
+            // 线程组中的线程组个数
             ngroupsSnapshot = ngroups;
             if (groups != null) {
                 groupsSnapshot = Arrays.copyOf(groups, ngroupsSnapshot);
@@ -351,6 +354,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
                 groupsSnapshot = null;
             }
         }
+        // 遍历线程组中的 线程组中的线程数  并累加
         for (int i = 0 ; i < ngroupsSnapshot ; i++) {
             result += groupsSnapshot[i].activeCount();
         }
@@ -888,11 +892,14 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
             if (destroyed) {
                 throw new IllegalThreadStateException();
             }
+            // 初始化 存储线程的数组
             if (threads == null) {
                 threads = new Thread[4];
             } else if (nthreads == threads.length) {
+                // 扩容
                 threads = Arrays.copyOf(threads, nthreads * 2);
             }
+            // 存储线程
             threads[nthreads] = t;
 
             // This is done last so it doesn't matter in case the
@@ -921,6 +928,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      */
     void threadStartFailed(Thread t) {
         synchronized(this) {
+            // 从线程组中 移除此线程
             remove(t);
             nUnstartedThreads++;
         }

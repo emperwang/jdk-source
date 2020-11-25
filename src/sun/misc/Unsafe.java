@@ -1150,6 +1150,8 @@ public final class Unsafe {
      * with loads or stores after the fence.
      * @since 1.8
      */
+    // 读屏障
+    // 防止重排序
     public native void loadFence();
 
     /**
@@ -1157,6 +1159,7 @@ public final class Unsafe {
      * with loads or stores after the fence.
      * @since 1.8
      */
+    // 写屏障 防止重排序
     public native void storeFence();
 
     /**

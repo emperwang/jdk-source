@@ -318,27 +318,32 @@ public class ThreadLocal<T> {
         /**
          * The initial capacity -- MUST be a power of two.
          */
+        // 容器初始化大小
         private static final int INITIAL_CAPACITY = 16;
 
         /**
          * The table, resized as necessary.
          * table.length MUST always be a power of two.
          */
+        // 存储数据的数组
         private Entry[] table;
 
         /**
          * The number of entries in the table.
          */
+        // 数据个数
         private int size = 0;
 
         /**
          * The next size value at which to resize.
          */
+        // 扩展的阈值
         private int threshold; // Default to 0
 
         /**
          * Set the resize threshold to maintain at worst a 2/3 load factor.
          */
+        // 阈值是 2/3
         private void setThreshold(int len) {
             threshold = len * 2 / 3;
         }
@@ -379,6 +384,7 @@ public class ThreadLocal<T> {
         private ThreadLocalMap(ThreadLocalMap parentMap) {
             Entry[] parentTable = parentMap.table;
             int len = parentTable.length;
+            // 设置阈值
             setThreshold(len);
             table = new Entry[len];
 
@@ -388,11 +394,13 @@ public class ThreadLocal<T> {
                     @SuppressWarnings("unchecked")
                     ThreadLocal<Object> key = (ThreadLocal<Object>) e.get();
                     if (key != null) {
+                        // 针对继承的 threadLocal的操作
                         Object value = key.childValue(e.value);
                         Entry c = new Entry(key, value);
                         int h = key.threadLocalHashCode & (len - 1);
+                        // 放入table中
                         while (table[h] != null)
-                            h = nextIndex(h, len);
+                            h = nextIndex(h, len);  /// hash冲突时的处理
                         table[h] = c;
                         size++;
                     }
@@ -433,12 +441,13 @@ public class ThreadLocal<T> {
             int len = tab.length;
 
             while (e != null) {
+                // 获取key
                 ThreadLocal<?> k = e.get();
                 if (k == key)
                     return e;
                 if (k == null)
                     expungeStaleEntry(i);
-                else
+                else    // hash冲突时的 获取
                     i = nextIndex(i, len);
                 e = tab[i];
             }
@@ -495,7 +504,9 @@ public class ThreadLocal<T> {
                  e != null;
                  e = tab[i = nextIndex(i, len)]) {
                 if (e.get() == key) {
+                    // 置key为null
                     e.clear();
+                    // 对位置i进行rehash
                     expungeStaleEntry(i);
                     return;
                 }
@@ -598,6 +609,7 @@ public class ThreadLocal<T> {
             // Rehash until we encounter null
             Entry e;
             int i;
+            // 重新hash
             for (i = nextIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = nextIndex(i, len)) {
