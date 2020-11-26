@@ -97,9 +97,11 @@ public class URLClassPath {
     }
 
     /* The original search path of URLs. */
+    // 存储要加载的文件的路径
     private ArrayList<URL> path = new ArrayList<URL>();
 
     /* The stack of unopened URLs */
+    // 要加载的jar的url
     Stack<URL> urls = new Stack<URL>();
 
     /* The resulting search path of Loaders */
@@ -221,6 +223,10 @@ public class URLClassPath {
     public URL findResource(String name, boolean check) {
         Loader loader;
         int[] cache = getLookupCache(name);
+        // 使用不同的classloader进行加载
+        // 1. 首先是 bootStrapClassLoader
+        // 2. extClassLoader
+        // 3. AppClassLoader
         for (int i = 0; (loader = getNextLoader(cache, i)) != null; i++) {
             URL url = loader.findResource(name, check);
             if (url != null) {
@@ -245,6 +251,7 @@ public class URLClassPath {
 
         Loader loader;
         int[] cache = getLookupCache(name);
+        // 这里加载 使用了不同的classLoader来进行
         for (int i = 0; (loader = getNextLoader(cache, i)) != null; i++) {
             Resource res = loader.getResource(name, check);
             if (res != null) {

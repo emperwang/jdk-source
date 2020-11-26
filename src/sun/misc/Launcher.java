@@ -52,6 +52,7 @@ import sun.net.www.ParseUtil;
 public class Launcher {
     private static URLStreamHandlerFactory factory = new Factory();
     private static Launcher launcher = new Launcher();
+    // boot加载的 类路径
     private static String bootClassPath =
         System.getProperty("sun.boot.class.path");
 
@@ -65,6 +66,7 @@ public class Launcher {
         // Create the extension class loader
         ClassLoader extcl;
         try {
+            // 创建了  extClassLoader
             extcl = ExtClassLoader.getExtClassLoader();
         } catch (IOException e) {
             throw new InternalError(
@@ -73,6 +75,7 @@ public class Launcher {
 
         // Now create the class loader to use to launch the application
         try {
+            // 创建了 AppClassLoader
             loader = AppClassLoader.getAppClassLoader(extcl);
         } catch (IOException e) {
             throw new InternalError(
@@ -132,6 +135,7 @@ public class Launcher {
          */
         public static ExtClassLoader getExtClassLoader() throws IOException
         {
+            // 单例创建
             if (instance == null) {
                 synchronized(ExtClassLoader.class) {
                     if (instance == null) {
@@ -151,6 +155,7 @@ public class Launcher {
                 return AccessController.doPrivileged(
                     new PrivilegedExceptionAction<ExtClassLoader>() {
                         public ExtClassLoader run() throws IOException {
+                            // extClassLoader要加载的路径
                             final File[] dirs = getExtDirs();
                             int len = dirs.length;
                             for (int i = 0; i < len; i++) {
@@ -178,6 +183,7 @@ public class Launcher {
         }
 
         private static File[] getExtDirs() {
+            // extClassLoader 要加载的 路径
             String s = System.getProperty("java.ext.dirs");
             File[] dirs;
             if (s != null) {
@@ -288,6 +294,7 @@ public class Launcher {
         public static ClassLoader getAppClassLoader(final ClassLoader extcl)
             throws IOException
         {
+            // AppClassLoader 要加载的路径
             final String s = System.getProperty("java.class.path");
             final File[] path = (s == null) ? new File[0] : getClassPath(s);
 
@@ -404,10 +411,12 @@ public class Launcher {
         static final URLClassPath bcp;
         static {
             URL[] urls;
+            // 类路径
             if (bootClassPath != null) {
                 urls = AccessController.doPrivileged(
                     new PrivilegedAction<URL[]>() {
                         public URL[] run() {
+                            // 获取路径上的 文件
                             File[] classPath = getClassPath(bootClassPath);
                             int len = classPath.length;
                             Set<File> seenDirs = new HashSet<File>();
@@ -422,6 +431,7 @@ public class Launcher {
                                     MetaIndex.registerDirectory(curEntry);
                                 }
                             }
+                            // 把文件转换路径转换为 URL
                             return pathToURLs(classPath);
                         }
                     }
