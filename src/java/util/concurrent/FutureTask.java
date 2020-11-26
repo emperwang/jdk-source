@@ -171,11 +171,14 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
     // 取消操作
     public boolean cancel(boolean mayInterruptIfRunning) {
+        // 状态时 NEW, 且cas设置新状态成功,  则继续向下执行
+        // 如果其中之一 失败,则返回false, 表示取消失败
         if (!(state == NEW &&
               UNSAFE.compareAndSwapInt(this, stateOffset, NEW,
                   mayInterruptIfRunning ? INTERRUPTING : CANCELLED)))
             return false;
         try {    // in case call to interrupt throws exception
+            // 如果是中断导致的,则执行这里
             if (mayInterruptIfRunning) {
                 try {
                     // 如果进行中断,则中断 runner线程
@@ -184,10 +187,13 @@ public class FutureTask<V> implements RunnableFuture<V> {
                         t.interrupt();
                 } finally { // final state
                     // 更新状态
+                    // 设置状态为  INTERUPTED 即中断
                     UNSAFE.putOrderedInt(this, stateOffset, INTERRUPTED);
                 }
             }
         } finally {// 是否其他等待的线程
+            // 无论是中断 还是 cancel, 都会在之类进行一些完成后的操作
+            // 这里会唤醒 此 waitNode对应的等待列表的 等待线程
             finishCompletion();
         }
         return true;

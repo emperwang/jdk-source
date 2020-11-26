@@ -706,6 +706,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * from the queue during shutdown. The method is non-private to
      * allow access from ScheduledThreadPoolExecutor.
      */
+    // 尝试设置线程池状态为 terminate,即终止
     final void tryTerminate() {
         for (;;) {
             int c = ctl.get();
@@ -717,7 +718,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                 return;
             // 发送中断信号到  workers中
             if (workerCountOf(c) != 0) { // Eligible to terminate
-                interruptIdleWorkers(ONLY_ONE);
+                interruptIdleWorkers(ONLY_ONE);     // 给idle的线程发送中断
                 return;
             }
 
@@ -725,6 +726,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             mainLock.lock();
             try {
                 // 设置运行状态为 TIDYING
+                // 由此可以看到 TIDYING 和 TERMINATED 中间只是相差一个  terminated 扩展函数
                 if (ctl.compareAndSet(c, ctlOf(TIDYING, 0))) {
                     try {
                         // 停止
@@ -779,7 +781,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         final ReentrantLock mainLock = this.mainLock;
         mainLock.lock();
         try {
-            for (Worker w : workers)
+            for (Worker w : workers)    // 给所有已经启动的线程 发送中断标志
                 w.interruptIfStarted();
         } finally {
             mainLock.unlock();
@@ -812,6 +814,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             // 遍历所有的worker
             for (Worker w : workers) {
                 Thread t = w.thread;
+                // 这里w.tryLock 如果成功了,则表示线程没有再执行任务,即idle的
+                // 因为线程在运行任务时,会进行上锁操作
                 if (!t.isInterrupted() && w.tryLock()) {
                     try {
                         // 给各个 worker中的thread 发送 中断
@@ -881,7 +885,10 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     private List<Runnable> drainQueue() {
         BlockingQueue<Runnable> q = workQueue;
         ArrayList<Runnable> taskList = new ArrayList<Runnable>();
+        // 把workQueue中的任务 添加到 taskList中
         q.drainTo(taskList);
+        // 有可能操作完后,又有添加的操作
+        // 这里相当于 recheck,即把新添加的任务删除 并添加到 taskList中
         if (!q.isEmpty()) {
             for (Runnable r : q.toArray(new Runnable[0])) {
                 if (q.remove(r))
@@ -991,7 +998,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                 }
                 // 如果添加工程,则运行刚创建的worker中的线程
                 if (workerAdded) {
-                    t.start();
+                    t.start();      // 添加成功,则运行worker
                     workerStarted = true;
                 }
             }
@@ -1480,14 +1487,19 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *
      * @throws SecurityException {@inheritDoc}
      */
+    // 关闭线程池
+    // 看到最主要的还是 设置线程池状态为 shutdown
     public void shutdown() {
         final ReentrantLock mainLock = this.mainLock;
         mainLock.lock();
         try {
             checkShutdownAccess();
-            // 更新状态
+            // 自旋更新 线程池状态
             advanceRunState(SHUTDOWN);
-            // 给所有的worker线程 发送中断信号
+            // 给所有的idle的worker线程 发送中断信号
+            // 注意这里判断idle的方式: worker运行任务时,会lock 上锁
+            // 而没有运行任务 或者 在阻塞获取任务时,都没有上锁的操作
+            // 故: 如果对应的worker.tryLock操作成功,那么就认为此worker是idle的
             interruptIdleWorkers();
             // 扩展方法
             onShutdown(); // hook for ScheduledThreadPoolExecutor
@@ -1515,6 +1527,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *
      * @throws SecurityException {@inheritDoc}
      */
+    // 立即关闭线程池
     public List<Runnable> shutdownNow() {
         List<Runnable> tasks;
         final ReentrantLock mainLock = this.mainLock;
@@ -1526,6 +1539,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             // 给worker 发送中断信号
             interruptWorkers();
             // 移除队列中的 task
+            // 并返回移除的那些task
             tasks = drainQueue();
         } finally {
             mainLock.unlock();
@@ -1573,7 +1587,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                 // 如果超时时间小于0, 返回false
                 if (nanos <= 0)
                     return false;
-                // condition 等待
+                // condition 等待  阻塞式的, tryTerminated成功后,会进行唤醒操作
                 nanos = termination.awaitNanos(nanos);
             }
         } finally {

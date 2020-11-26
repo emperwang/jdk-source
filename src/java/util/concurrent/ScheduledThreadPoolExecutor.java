@@ -220,7 +220,7 @@ public class ScheduledThreadPoolExecutor
          */
         ScheduledFutureTask(Runnable r, V result, long ns, long period) {
             super(r, result);
-            this.time = ns; // 第一次是延迟执行的时间,之后就是执行的间隔时间
+            this.time = ns; // now() + initialDelay 的一个时间
             this.period = period;   // 每次执行间隔事件
             this.sequenceNumber = sequencer.getAndIncrement();
         }
@@ -275,10 +275,12 @@ public class ScheduledThreadPoolExecutor
          */
         private void setNextRunTime() {
             long p = period;
+            // time本身就是now()+initialDelay获得的,即 time就是记录了开始的时间,并以此为基础 开始推算下次时间
             if (p > 0)
-                time += p;
+                time += p;      // 对于fixRate任务的处理
             else
-                time = triggerTime(-p);
+                time = triggerTime(-p); // 而对于delay的任务,其每次都是基于 now()来重新计算运行时间,故每次都会按照
+                                        // 设置的delay时间 进行顺延
         }
 
         public boolean cancel(boolean mayInterruptIfRunning) {
@@ -368,10 +370,13 @@ public class ScheduledThreadPoolExecutor
      */
     @Override void onShutdown() {
         BlockingQueue<Runnable> q = super.getQueue();
+        ///线程池 shutdown后对 delaytask的处理策略
         boolean keepDelayed =
             getExecuteExistingDelayedTasksAfterShutdownPolicy();
+        // 线程池 shutdown后,对 periodtask的处理策略
         boolean keepPeriodic =
             getContinueExistingPeriodicTasksAfterShutdownPolicy();
+        // 如果两个策略都为false,则 遍历队列中的任务, 都进行取消
         if (!keepDelayed && !keepPeriodic) {
             for (Object e : q.toArray())
                 if (e instanceof RunnableScheduledFuture<?>)
