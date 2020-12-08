@@ -318,6 +318,7 @@ public class PriorityQueue<E> extends AbstractQueue<E>
      *         according to the priority queue's ordering
      * @throws NullPointerException if the specified element is null
      */
+    // 添加元素到 队列中宏
     public boolean add(E e) {
         return offer(e);
     }
@@ -336,6 +337,7 @@ public class PriorityQueue<E> extends AbstractQueue<E>
             throw new NullPointerException();
         modCount++;
         int i = size;
+        // 扩容
         if (i >= queue.length)
             grow(i + 1);
         size = i + 1;
@@ -647,13 +649,42 @@ public class PriorityQueue<E> extends AbstractQueue<E>
         else
             siftUpComparable(k, x);
     }
-
+    /*
+        1
+       / \
+      3   5
+     / \  / \
+    6   7 8  9
+ 数组:
+ idx: 0 1 2 3 4 5 6
+      1 3 5 6 7 8 9
+  此时要在末尾位置  插入元素 4
+  第一次:
+  k=7  x=4  parent=3  pitm=5 4<5            k=3  x=4  parent=1  pitm=3   4>3
+  queue[7] = 6                                queue[3] = 4
+         1                   1                      1
+       /  \                /  \                    / \
+      3    5    ===>      3    5         ===>     3   5
+     / \   / \           / \   / \              /  \  / \
+    6   7  8  9             7  8  9            4   7 8   9
+                       /                      /
+                      6                      6
+     */
+    // k为要插入的位置  e为k位置要插入的元素
+    // 小顶堆
     @SuppressWarnings("unchecked")
     private void siftUpComparable(int k, E x) {
         Comparable<? super E> key = (Comparable<? super E>) x;
         while (k > 0) {
+            // 先得到要插入位置k的父位置
             int parent = (k - 1) >>> 1;
+            // 得到父位置的元素的值
             Object e = queue[parent];
+            // 1.父元素和 要插入元素比较,如果要插入元素x大于父元素e
+            //      那就直接把元素x放入位置k
+            // 2.如果要插入元素 x 比 父元素小
+            //      那么就把父元素放入k位置
+            //      并把 父元素的 索引 赋值给 k,进行下次循环
             if (key.compareTo((E) e) >= 0)
                 break;
             queue[k] = e;
