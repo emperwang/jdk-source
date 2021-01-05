@@ -2260,12 +2260,15 @@ public final class Class<T> implements java.io.Serializable,
      * @since  JDK1.1
      */
     public java.net.URL getResource(String name) {
+        // 这里相当于是指定了查找的目录
         name = resolveName(name);
+        // 获取类加载器
         ClassLoader cl = getClassLoader0();
         if (cl==null) {
             // A system class.
             return ClassLoader.getSystemResource(name);
         }
+        // 使用类加载器进行加载
         return cl.getResource(name);
     }
 
@@ -2390,6 +2393,7 @@ public final class Class<T> implements java.io.Serializable,
         if (name == null) {
             return name;
         }
+        // 如果不是 / 开头,则在当前类的packet中查找 文件
         if (!name.startsWith("/")) {
             Class<?> c = this;
             while (c.isArray()) {
@@ -2398,10 +2402,12 @@ public final class Class<T> implements java.io.Serializable,
             String baseName = c.getName();
             int index = baseName.lastIndexOf('.');
             if (index != -1) {
+                // 如果不是/开头,则使用类同目录
                 name = baseName.substring(0, index).replace('.', '/')
                     +"/"+name;
             }
         } else {
+            // 如果使用了/,则在对应的目录查找
             name = name.substring(1);
         }
         return name;

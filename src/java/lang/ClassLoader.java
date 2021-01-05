@@ -1080,11 +1080,13 @@ public abstract class ClassLoader {
      */
     public URL getResource(String name) {
         URL url;
+        // 双亲委派去查找,即先让父类加载器去进行加载
         if (parent != null) {
             url = parent.getResource(name);
         } else {
             url = getBootstrapResource(name);
         }
+        // 如果父类没有加载到,则使用当前加载器加载,当前默认findResource返回null
         if (url == null) {
             url = findResource(name);
         }
